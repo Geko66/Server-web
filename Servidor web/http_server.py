@@ -1,7 +1,4 @@
-import http.server
-import socketserver
-from flask import Flask, request, jsonify
-from werkzeug.serving import make_server
+from flask import Flask, request, jsonify, redirect, url_for
 
 app = Flask(__name__)
 
@@ -11,8 +8,10 @@ messages = []
 def iniciar():
     global messages
     messages = []
-    print('Servidor iniciado')
-    return 'Servidor iniciado'
+    id = request.args.get('id')
+    print(f'Servidor iniciado con ID: {id}')
+    return redirect(url_for('enviar_mensaje_cliente', id=id))
+
 
 @app.route('/enviarMSG', methods=['POST'])
 def enviar_msg():
@@ -25,10 +24,15 @@ def enviar_msg():
 def obtener_mensajes():
     return jsonify(messages)
 
+@app.route('/enviar_mensaje_cliente', methods=['POST'])
+def enviar_mensaje_cliente():
+    message = request.json['message']
+    print(f'Mensaje enviado al cliente: {message}')
+    return message
+
 if __name__ == '__main__':
-    PORT = 500
-    httpd = make_server('', PORT, app)
-    print("Servidor en puerto", PORT)
-    httpd.serve_forever()
+    PORT = 5000
+    app.run(port=PORT)
+
 #Para url prueba netstat -ano | findstr :500 (puerto que se ponga)
 #ip 192.168.1.69
