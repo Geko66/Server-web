@@ -28,8 +28,8 @@ def obtener_mensajes():
 def enviar_mensaje_cliente():
     message = request.json['message']
     print(f'Mensaje enviado al cliente: {message}')
-    return message
-
+    response = jsonify({'message': message})
+    return response
 if __name__ == '__main__':
     PORT = 5000
     app.run(port=PORT)
