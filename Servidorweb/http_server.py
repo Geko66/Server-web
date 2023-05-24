@@ -23,6 +23,7 @@ private_key_bob = ec.generate_private_key(ec.SECP384R1())
 public_key_bob = private_key_bob.public_key()
 shared_key=private_key_alice.exchange(ec.ECDH(),public_key_bob)
 shared_key2=private_key_bob.exchange(ec.ECDH(),public_key_alice)
+
 if (shared_key==shared_key2):
     print('ok')
 
@@ -91,15 +92,28 @@ def enviar_msg():
 def obtener_mensajes():
     server_id = request.headers.get('X-Server-ID')
     data = load_server_data()
+    public_key_alice_bytes = public_key_alice.public_bytes(encoding=serialization.Encoding.DER, format=serialization.PublicFormat.SubjectPublicKeyInfo)
+    public_key_alice_dict =  public_key_alice_bytes.hex()
+    data[server_id]['public_key_alice']= public_key_alice_dict
+    save_server_data(data)
+    data = load_server_data()
     if server_id in data:
         messages = data[server_id]['messages']
-        public_key_alice_dict = {'x': public_key_alice.public_numbers().x, 'y': public_key_alice.public_numbers().y}
-        data[server_id]['public_key_alice'] = public_key_alice_dict # agregar clave pública de Alice a los datos del servidor
+        public_key_alice_dict = data[server_id]['public_key_alice']
+         # public_key_alice.public_numbers().x  public_key_alice.public_numbers().y agregar clave pública de Alice a los datos del servidor
         try:
             save_server_data(data) # guardar datos en el archivo
         except Exception as e:
             print(f'Error al guardar los datos del servidor: {str(e)}')
-        return jsonify({'messages': messages, 'publica_server': public_key_alice_dict})
+        diccionario={
+            "esp1":{
+                "messages":[messages],
+                "public_key_alice": [public_key_alice_dict]
+            }
+        }
+        return jsonify(diccionario)
+    #'messages': messages,{ 'id': server_id, 'messages':messages,'publica_server': public_key_alice_dict}
+        
     else:
         print(f'Error: el servidor {server_id} no se encuentra en el archivo')
         return f'Error: el servidor {server_id} no se encuentra en el archivo'
