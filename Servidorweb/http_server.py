@@ -1,3 +1,4 @@
+import binascii
 import http.server
 import socketserver
 import json
@@ -17,9 +18,9 @@ from cryptography.fernet import Fernet
 app = Flask(__name__)
 
 messages = []
-private_key_alice = ec.generate_private_key(ec.SECP384R1())
+private_key_alice = ec.generate_private_key(ec.SECP256R1())
 public_key_alice = private_key_alice.public_key()
-private_key_bob = ec.generate_private_key(ec.SECP384R1())
+private_key_bob = ec.generate_private_key(ec.SECP256R1())
 public_key_bob = private_key_bob.public_key()
 shared_key=private_key_alice.exchange(ec.ECDH(),public_key_bob)
 shared_key2=private_key_bob.exchange(ec.ECDH(),public_key_alice)
@@ -114,6 +115,46 @@ def obtener_mensajes():
         return jsonify(diccionario)
     #'messages': messages,{ 'id': server_id, 'messages':messages,'publica_server': public_key_alice_dict}
         
+    else:
+        print(f'Error: el servidor {server_id} no se encuentra en el archivo')
+        return f'Error: el servidor {server_id} no se encuentra en el archivo'
+
+@app.route('/compartida', methods=['GET'])
+def compartida():
+    server_id = request.headers.get('X-Server-ID')
+    data = load_server_data()
+
+    if server_id in data:
+        server_data = data[server_id]
+        publica_bob_list = server_data['messages']
+        public_key_alice = server_data['public_key_alice']
+
+        publica_bob_points = []
+        for publica_bob in publica_bob_list:
+            if len(publica_bob) % 2 != 0:
+                # Asegurarse de que la cadena tenga longitud par agregando un '0' al principio si es necesario
+                publica_bob = '0' + publica_bob
+
+            try:
+                publica_bob_bytes = bytes.fromhex(publica_bob)
+                publica_bob_points.append(publica_bob_bytes)
+            except ValueError:
+                print(f'Error: cadena hexadecimal no válida: {publica_bob}')
+
+        compartida_obj = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256R1(), publica_bob_points[0])
+        compartida = private_key_alice.exchange(ec.ECDH(), compartida_obj)
+        compartida_dict = compartida.hex()
+        server_data['compartida'] = compartida_dict
+        save_server_data(data)
+
+        diccionario = {
+            "esp1": {
+                "messages": publica_bob_list,
+                "public_key_alice": public_key_alice,
+                "compartida": compartida_dict
+            }
+        }
+        return jsonify(diccionario)
     else:
         print(f'Error: el servidor {server_id} no se encuentra en el archivo')
         return f'Error: el servidor {server_id} no se encuentra en el archivo'
