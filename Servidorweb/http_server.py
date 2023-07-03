@@ -1,3 +1,4 @@
+import base64
 import binascii
 import http.server
 import socketserver
@@ -18,15 +19,29 @@ from cryptography.fernet import Fernet
 app = Flask(__name__)
 
 messages = []
-private_key_alice = ec.generate_private_key(ec.SECP256R1())
+private_key_alice = ec.generate_private_key(curve=ec.SECP256R1(),backend=default_backend())
 public_key_alice = private_key_alice.public_key()
-private_key_bob = ec.generate_private_key(ec.SECP256R1())
-public_key_bob = private_key_bob.public_key()
-shared_key=private_key_alice.exchange(ec.ECDH(),public_key_bob)
-shared_key2=private_key_bob.exchange(ec.ECDH(),public_key_alice)
+#private_key_bob = ec.generate_private_key(ec.SECP256R1(),backend=default_backend())
+#public_key_bob = private_key_bob.public_key()
+#shared_key=private_key_alice.exchange(ec.ECDH(),public_key_bob)
+#shared_key2=private_key_bob.exchange(ec.ECDH(),public_key_alice)
+#tsmsno=private_key_alice
 
-if (shared_key==shared_key2):
-    print('ok')
+
+serialized_public = public_key_alice.public_bytes(encoding=serialization.Encoding.X962,format=serialization.PublicFormat.UncompressedPoint)
+print(serialized_public.hex())
+hex_string2=serialized_public.hex()
+
+
+bytes_resultantes=bytes.fromhex(hex_string2)
+
+#hex_string = binascii.hexlify(decoded_bytes).decode('utf-8')
+#print("Cadena hexadecimal:", hex_string)
+print("Cadena hexadecimal2:", hex_string2)
+print(bytes_resultantes)
+
+#if (shared_key==shared_key2):
+    #print('ok')
 
 
 
@@ -93,9 +108,9 @@ def enviar_msg():
 def obtener_mensajes():
     server_id = request.headers.get('X-Server-ID')
     data = load_server_data()
-    public_key_alice_bytes = public_key_alice.public_bytes(encoding=serialization.Encoding.DER, format=serialization.PublicFormat.SubjectPublicKeyInfo)
-    public_key_alice_dict =  public_key_alice_bytes.hex()
-    data[server_id]['public_key_alice']= public_key_alice_dict
+    #public_key_alice_bytes = public_key_alice.public_bytes(encoding=serialization.Encoding.DER, format=serialization.PublicFormat.SubjectPublicKeyInfo)
+    #public_key_alice_dict =  public_key_alice_bytes.hex()
+    data[server_id]['public_key_alice']= hex_string2
     save_server_data(data)
     data = load_server_data()
     if server_id in data:
@@ -131,19 +146,24 @@ def compartida():
 
         publica_bob_points = []
         for publica_bob in publica_bob_list:
-            if len(publica_bob) % 2 != 0:
+            print(len(publica_bob))
+            pares = [publica_bob[i:i+2] for i in range(0, len(publica_bob), 2)]
+            print(pares)
+            #if len(publica_bob) % 2 != 0:
                 # Asegurarse de que la cadena tenga longitud par agregando un '0' al principio si es necesario
-                publica_bob = '0' + publica_bob
-
+             #   publica_bob = '0' + publica_bob#[2:]
+            #else:
+                #publica_bob=publica_bob[2:]
             try:
                 publica_bob_bytes = bytes.fromhex(publica_bob)
                 publica_bob_points.append(publica_bob_bytes)
             except ValueError:
                 print(f'Error: cadena hexadecimal no válida: {publica_bob}')
 
-        compartida_obj = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256R1(), publica_bob_points[0])
+        compartida_obj = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256R1(), publica_bob_bytes)
         compartida = private_key_alice.exchange(ec.ECDH(), compartida_obj)
         compartida_dict = compartida.hex()
+        print (compartida_dict)
         server_data['compartida'] = compartida_dict
         save_server_data(data)
 
