@@ -49,11 +49,31 @@ DATA_DIR = 'data'
 SERVER_DATA_FILE = 'server_data.json'
 SERVER_DATA_PATH = os.path.join(DATA_DIR, SERVER_DATA_FILE)
 
+DATA_DIR2 = 'data2'
+SERVER_DATA_FILE2 = 'server_data2.json'
+SERVER_DATA_PATH2 = os.path.join(DATA_DIR, SERVER_DATA_FILE)
+
 def load_server_data():
     if not os.path.exists(DATA_DIR):
         os.makedirs(DATA_DIR)
     if os.path.exists(SERVER_DATA_PATH):
         with open(SERVER_DATA_PATH, 'r') as f:
+            data = json.load(f)
+    else:
+        data = {}
+    return data
+
+def save_server_data2(data):
+    if not os.path.exists(DATA_DIR):
+        os.makedirs(DATA_DIR)
+    with open(SERVER_DATA_PATH, 'w') as f:
+        json.dump(data, f)
+
+def load_server_data2():
+    if not os.path.exists(DATA_DIR2):
+        os.makedirs(DATA_DIR2)
+    if os.path.exists(SERVER_DATA_PATH2):
+        with open(SERVER_DATA_PATH2, 'r') as f:
             data = json.load(f)
     else:
         data = {}
@@ -134,8 +154,100 @@ def obtener_mensajes():
         print(f'Error: el servidor {server_id} no se encuentra en el archivo')
         return f'Error: el servidor {server_id} no se encuentra en el archivo'
 
-@app.route('/compartida', methods=['GET'])
+@app.route('/compartida', methods=['POST'])
 def compartida():
+    global compartidaB
+    server_id = request.headers.get('X-Server-ID')
+    compartidaB = request.json['compartidaB']
+    data = load_server_data()
+    if server_id in data:
+        if 'compartidaB' not in data[server_id]:
+            data[server_id]['compartidaB'] = []
+        data[server_id]['compartidaB'].append(compartidaB)
+        save_server_data(data)
+        print(f'Mensaje recibido: {compartidaB}')
+        return 'Mensaje recibido'
+    else:
+        print(f'Error: el servidor {server_id} no se encuentra en el archivo')
+        return f'Error: el servidor {server_id} no se encuentra en el archivo'
+    
+@app.route('/verificacion', methods=['GET'])
+def verify():
+    server_id = request.headers.get('X-Server-ID')
+    data = load_server_data()
+    data2=load_server_data2()
+    if server_id in data:
+        server_data = data[server_id]
+        publica_bob_list = server_data['messages']
+        publica_bob_points = []
+        for publica_bob in publica_bob_list:
+            print(len(publica_bob))
+            pares = [publica_bob[i:i+2] for i in range(0, len(publica_bob), 2)]
+            print(pares)
+            try:
+                    publica_bob_bytes = bytes.fromhex(publica_bob)
+                    publica_bob_points.append(publica_bob_bytes)
+            except ValueError:
+                    print(f'Error: cadena hexadecimal no válida: {publica_bob}')
+        compartida_obj = ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256R1(), publica_bob_bytes)
+        compartida = private_key_alice.exchange(ec.ECDH(), compartida_obj)
+        compartida_dict = compartida.hex()
+        print (compartida_dict)
+
+
+        compartidaB_list = data[server_id]['compartidaB']
+        compartidaB_points = []
+        for compartidaB in compartidaB_list:
+            print(len(publica_bob))
+            pares = [compartidaB[i:i+2] for i in range(0, len(compartidaB), 2)]
+            print(pares)
+            try:
+                    compartidaB_bytes = bytes.fromhex(compartidaB)
+                    compartidaB_points.append(compartidaB_bytes)
+            except ValueError:
+                    print(f'Error: cadena hexadecimal no válida: {compartidaB}')
+        print(compartidaB_bytes.hex())
+        if compartidaB_bytes.hex() ==compartida_dict:
+            print(f'Mensaje Valido: {compartidaB}')
+            valor=0
+            diccionario2={
+            "esp1":{
+                "valor": valor
+                
+            }
+        }
+            return jsonify(diccionario2)
+        else:
+            valor=1
+            diccionario2={
+            "esp1":{
+                "valor": valor
+                
+            }
+        }
+            return jsonify(diccionario2)
+    else:
+        print(f'No tiene {server_id} agregado')
+        return f'No tiene {server_id} agregado'
+
+
+@app.route('/Derivada', methods=['POST'])
+def derivada():
+    global derivada
+    server_id = request.headers.get('X-Server-ID')
+    derivada = request.json['derivada']
+    data = load_server_data()
+    if server_id in data:
+        if 'derivada' not in data[server_id]:
+            data[server_id]['derivada'] = []
+        data[server_id]['derivada'].append(derivada)
+        save_server_data(data)
+        print(f'Mensaje recibido: {derivada}')
+        return 'Mensaje recibido'
+    else:
+        print(f'Error: el servidor {server_id} no se encuentra en el archivo')
+        return f'Error: el servidor {server_id} no se encuentra en el archivo'
+    """"
     server_id = request.headers.get('X-Server-ID')
     data = load_server_data()
 
@@ -178,7 +290,7 @@ def compartida():
     else:
         print(f'Error: el servidor {server_id} no se encuentra en el archivo')
         return f'Error: el servidor {server_id} no se encuentra en el archivo'
-
+"""
 if __name__ == '__main__':
     PORT = 500
     httpd = make_server('', PORT, app)
