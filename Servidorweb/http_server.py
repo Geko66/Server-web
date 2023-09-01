@@ -12,6 +12,7 @@ import hashlib
 import numpy as np
 import random
 import struct
+import time
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes,serialization
 from cryptography.hazmat.primitives.asymmetric import ec
@@ -48,7 +49,7 @@ print(bytes_resultantes)
 #if (shared_key==shared_key2):
     #print('ok')
 
-
+compartidaB=None
 
 DATA_DIR = 'data'
 SERVER_DATA_FILE = 'server_data.json'
@@ -124,7 +125,7 @@ def enviar_msg():
             data[server_id]['messages'] = []
         data[server_id]['messages'].append(message)
         save_server_data(data)
-        print(f'Mensaje recibido: {message}')
+        print(f'Mensaje recibido clave publica ESP: {message}')
         return 'Mensaje recibido'
     else:
         print(f'Error: el servidor {server_id} no se encuentra en el archivo')
@@ -173,7 +174,8 @@ def compartida():
         data[server_id]['compartidaB'].append(compartidaB)
 
         save_server_data(data)
-        print(f'Mensaje recibido: {compartidaB}')
+        print(f'Mensaje recibido de clave compartida: {compartidaB}')
+        time.sleep(4)
         return 'Mensaje recibido'
     else:
         print(f'Error: el servidor {server_id} no se encuentra en el archivo')
@@ -186,7 +188,7 @@ def verify():
     server_id = request.headers.get('X-Server-ID')
     data = load_server_data()
     data2=load_server_data2()
-    
+    time.sleep(4)
     if server_id in data:
         server_data = data[server_id]
         publica_bob_list = server_data['messages']
@@ -230,6 +232,7 @@ def verify():
             }
         }
             return jsonify(diccionario2)
+            print("\n")
         else:
             valor=1
             diccionario2={
@@ -239,6 +242,7 @@ def verify():
             }
         }
             return jsonify(diccionario2)
+            print("\n")
     else:
         print(f'No tiene {server_id} agregado')
         return f'No tiene {server_id} agregado'
@@ -248,6 +252,7 @@ def verify():
 def derivada():
     global key
     global derivadaB
+    time.sleep(4)
     server_id = request.headers.get('X-Server-ID')
     derivadaB = request.json['DerivadaB']
     data = load_server_data()
@@ -259,6 +264,7 @@ def derivada():
         
         print(f'Mensaje recibido: {derivadaB}')
         return 'Mensaje recibido'
+        print("\n")
     else:
         print(f'Error: el servidor {server_id} no se encuentra en el archivo')
         return f'Error: el servidor {server_id} no se encuentra en el archivo'
@@ -283,6 +289,7 @@ def generar_hash(clave, info, salt):
 @app.route('/verificacion2', methods=['GET'])
 def verify2():
     global shared
+    time.sleep(4)
     global compartidaB
     global der
     server_id = request.headers.get('X-Server-ID')
@@ -311,16 +318,11 @@ def verify2():
         salt = b'aaaa'
         saludo=b"HOLA" 
         info = b"isma_crypto_send"
-        print("\n")
-        print("\n")
-        print("\n")
-        print("\n")
-        print("\n")
-        print("\n")
-        print(salt)
-        print(salt.hex())
-        print(saludo)
-        print(saludo.hex())
+        
+        #print(salt)
+        #print(salt.hex())
+        #print(saludo)
+        #print(saludo.hex())
         hkdf = HKDF(
         algorithm=hashes.SHA256(),
         length=32,  # Longitud de la clave de salida deseada
@@ -334,7 +336,7 @@ def verify2():
 # Inicializar el bytearray a 0
         
 
-        print("COMPARTIDA; "+compartidaB)#derivadaB_bytes.hex())
+        print("COMPARTIDA; "+ compartidaB)#derivadaB_bytes.hex())
         clave=bytes.fromhex(compartidaB)
         
         
@@ -367,6 +369,7 @@ def verify2():
 @app.route('/cifrado', methods=['POST'])
 def cifrado():
     global cifrado
+    time.sleep(4)
     global compartidaB
     global iv
     global der
